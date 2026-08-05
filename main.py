@@ -1,4 +1,3 @@
-# fatimashahzad18115
 
 from fastapi import Depends, FastAPI, HTTPException 
 from pydantic import BaseModel, Field, EmailStr
@@ -10,12 +9,14 @@ from dotenv import load_dotenv
 import os
 from supabase import create_client
 
-load_dotenv()
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 if SUPABASE_URL is None or SUPABASE_KEY is None:
     raise RuntimeError("Missing SUPABASE_URL or SUPABASE_KEY environment variables")
 supabase_client = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+
+load_dotenv()
 
 class UserAuth(BaseModel):
     email: EmailStr
