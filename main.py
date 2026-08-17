@@ -6,7 +6,7 @@ from sqlalchemy import create_engine, Column, Integer, String, Boolean
 from sqlalchemy.ext.declarative import declarative_base 
 from sqlalchemy.orm import sessionmaker, Session
 from dotenv import load_dotenv
-from fastapi.security import HTTPBearer
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import os
 from supabase import create_client
 
@@ -44,7 +44,6 @@ class Task(Base):
     title = Column(String(100), nullable=False)
     done = Column(Boolean, nullable=False)
 
-Base.metadata.create_all(engine)
 
 
 def init_db():
@@ -131,22 +130,33 @@ async def public_info():
 
 security = HTTPBearer(auto_error=False) # we did this autofalse so we can handle error ourselves, but this fastapi security handles security
 @app.get("/protected/profile")
-async def protected_profile(authorization: Optional[str] = Depends(security)):
+async def protected_profile (authorization: Optional[HTTPAuthorizationCredentials] = Depends(security)):
     if not authorization:
         raise HTTPException( status_code= 401, detail="Access token required")
 
-    if not authorization.startswith("Bearer "):
+    if not authorization.credentials.startswith("Bearer "):
         raise HTTPException(status_code= 401, detail="Access token required")
-    token = authorization[7:]
+    token = authorization.credentials
 
-    if not token or token.strip() == " ":
+    if not token or token.strip() == "":
         raise HTTPException( status_code=401, detail="Access token required")
-    
-    return {
-        "message": "You're authenticated! (Token verification coming soon)",
-        "token_received": token[:10] + "..." if len(token) > 10 else token
-    }
-     
+    else:
+        try:
+            
+            request = supabase_client.auth.get_user(token)
+
+            user1 = request.user
+            return {
+                    "email": user1.email,
+                    "created_at": user1.created_at,
+             }
+        except Exception as e:
+            print(f"Token verification failed: {str(e)}")  # For debugging
+            
+            raise HTTPException(
+                status_code= 401,
+                detail="Invalid or expired token"
+            )
     
 @app.get("/tasks/search")
 def search_with_words(search: str, db: Session = Depends(get_db)):
