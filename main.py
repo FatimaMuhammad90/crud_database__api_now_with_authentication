@@ -6,8 +6,11 @@ from sqlalchemy import create_engine, Column, Integer, String, Boolean
 from sqlalchemy.ext.declarative import declarative_base 
 from sqlalchemy.orm import sessionmaker, Session
 from dotenv import load_dotenv
+from fastapi.security import HTTPBearer
 import os
 from supabase import create_client
+
+load_dotenv()
 
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
@@ -16,7 +19,6 @@ if SUPABASE_URL is None or SUPABASE_KEY is None:
 supabase_client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 
-load_dotenv()
 
 class UserAuth(BaseModel):
     email: EmailStr
@@ -121,7 +123,31 @@ def login(user: UserAuth):
     except Exception as e:
         return {"error": f" Login failed: {str(e)}"}    
 
+@app.get("/public/info")
+async def public_info():
+    return{
+        "message": "Welcome stranger! This info is public"
+    }
 
+security = HTTPBearer(auto_error=False) # we did this autofalse so we can handle error ourselves, but this fastapi security handles security
+@app.get("/protected/profile")
+async def protected_profile(authorization: Optional[str] = Depends(security)):
+    if not authorization:
+        raise HTTPException( status_code= 401, detail="Access token required")
+
+    if not authorization.startswith("Bearer "):
+        raise HTTPException(status_code= 401, detail="Access token required")
+    token = authorization[7:]
+
+    if not token or token.strip() == " ":
+        raise HTTPException( status_code=401, detail="Access token required")
+    
+    return {
+        "message": "You're authenticated! (Token verification coming soon)",
+        "token_received": token[:10] + "..." if len(token) > 10 else token
+    }
+     
+    
 @app.get("/tasks/search")
 def search_with_words(search: str, db: Session = Depends(get_db)):
     result = db.query(Task).filter(Task.title.ilike(f"%{search}%")).all()
