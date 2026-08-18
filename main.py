@@ -122,41 +122,72 @@ def login(user: UserAuth):
     except Exception as e:
         return {"error": f" Login failed: {str(e)}"}    
 
+    
+security = HTTPBearer(auto_error=False) # we did this autofalse so we can handle error ourselves, but this fastapi security handles security
 @app.get("/public/info")
 async def public_info():
     return{
         "message": "Welcome stranger! This info is public"
     }
-
-security = HTTPBearer(auto_error=False) # we did this autofalse so we can handle error ourselves, but this fastapi security handles security
-@app.get("/protected/profile")
-async def protected_profile (authorization: Optional[HTTPAuthorizationCredentials] = Depends(security)):
+@app.get("/protected/user")
+async def get_current_user(authorization: Optional[HTTPAuthorizationCredentials] = Depends(security)):
     if not authorization:
-        raise HTTPException( status_code= 401, detail="Access token required")
+        raise HTTPException(status_code=401, detail="Access token required")
+    
+# this was why eariler code was breaking, header has two components, scheme and credentials
 
-    if not authorization.credentials.startswith("Bearer "):
-        raise HTTPException(status_code= 401, detail="Access token required")
+    if authorization.scheme.lower() != "bearer":
+        raise HTTPException(status_code=401, detail="Invalid authentication scheme")
+    
     token = authorization.credentials
 
     if not token or token.strip() == "":
-        raise HTTPException( status_code=401, detail="Access token required")
+        raise HTTPException(status_code=401, detail="Access token required")
     else:
         try:
-            
             request = supabase_client.auth.get_user(token)
-
             user1 = request.user
             return {
-                    "email": user1.email,
-                    "created_at": user1.created_at,
-             }
+                "message": f"Welcome {user1.email}! This info is protected",
+                "email": user1.email,
+                "created_at": user1.created_at,
+            }
         except Exception as e:
-            print(f"Token verification failed: {str(e)}")  # For debugging
-            
+            print(f"Token verification failed: {str(e)}")
             raise HTTPException(
-                status_code= 401,
+                status_code=401,
                 detail="Invalid or expired token"
-            )
+)
+
+
+@app.get("/protected/dashboard")
+async def protected_dashboard(user: dict = Depends(get_current_user)):
+    return {
+        "message": f"Welcome {user['email']}! This is your dashboard",
+        "email": user['email'],
+        "created_at": user['created_at'],
+    }
+
+
+@app.get("/protected/profile")
+async def protected_profile (user: dict = Depends(get_current_user)):
+    return {
+        "message": f"Welcome {user['email']}! This is your profile",
+        "email": user['email'],
+        "created_at": user['created_at'],
+    }
+
+@app.get("/auth/logout")
+async def logout(user: dict = Depends(get_current_user)):
+    try:
+        supabase_client.auth.sign_out()
+        return {"message": "No content, logged out",
+                "status_code": 204}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Logout failed: {str(e)}")
+
+
+
     
 @app.get("/tasks/search")
 def search_with_words(search: str, db: Session = Depends(get_db)):
