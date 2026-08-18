@@ -1,7 +1,5 @@
 # crud_database__api_now_with_authentication
 
-Sure — shorter and written as a straightforward README, without the repetitive “I created/added” wording.
-
 # Task API — Supabase Authentication
 
 A FastAPI task management API with **Supabase Authentication**, JWT verification, protected routes, and Swagger UI documentation.
@@ -113,8 +111,17 @@ http://localhost:8000/docs
 A secure FastAPI API with Supabase-based authentication, JWT verification, reusable protected-route authentication, logout, and interactive Swagger documentation.
 
 
+# AI Rematch Part
 
+## My Prompt
 
+`Add supabase authentication system with auth endpints login and logout and protected routes, but a middle ware fucntion whcih checks the logged in user's identity before welcome them to profile and dashboard. Implement checks within this fucntion to make sure the token created has the startswith bearer, then authenticate the token itself, using the relevant supabase function for python, and use fastapi's security`
+
+## Findings
+Majority of the code is similar, I did provide context using the eariler AI generated code from week 1's CRUD. AI does use more newer implementation of error handling as compared to me. Instead of Creating one pydantic Auth model like I did, it has used two separate schemas one for signup and one for login. This is the only one major change. Authenitication in the middleware is relatively similar to mine. 
+
+## Improvements
+Here my code could use some improvements when it comes to error handling. Another point, similar  prompts creates much different code based on the AI being used. Deepseek relatively gave a much more detailed and extra code, as compared to Gemini, the one the in AI_code.py file.
 
 
 
